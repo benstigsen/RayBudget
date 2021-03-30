@@ -5,10 +5,12 @@
 
 /* 
   TO-DO:
-    - Add expense category color
-    - Add expense category string to expenses list
-    - Add dynamic allocation to the expenses when added
-
+    - Add expense category color (on wheel and scrollable panel)
+    - Add the ability to add category
+    - Add the ability to change expense category and value in the expense list
+    - Fix text alignment and GUI element placement
+    - Change saving / loading system 
+    - REFACTOR!!!
 */
 
 void save();
@@ -167,12 +169,12 @@ int main()
         }
       EndScissorMode();
       
-      if (GuiButton((Rectangle){550, 350, 100, 50}, "save")) 
+      if (GuiButton((Rectangle){550, 380, 90, 50}, "save")) 
       {
         save();
       }
       
-      if (GuiButton((Rectangle){660, 350, 100, 50}, "load")) 
+      if (GuiButton((Rectangle){660, 380, 90, 50}, "load")) 
       {
         load();
       }
@@ -236,7 +238,5 @@ void load()
     budgetCurrent -= expenses[j].value;
     ++j;
   }
-
-  //printf("%d\n", lines);
 }
 
