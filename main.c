@@ -1,3 +1,4 @@
+#include "main.h"
 #include "raylib.h"
 
 #define RAYGUI_IMPLEMENTATION
@@ -10,30 +11,11 @@
     - Add the ability to change expense category and value in the expense list
     - Fix text alignment and GUI element placement
     - Change saving / loading system 
-    - REFACTOR!!!
+    - Remove debug printf()
+    - Refactor
 */
 
-void save();
-void load();
-
-enum ExpenseType {ESSENTIALS, ENTERTAINMENT, INVESTMENT, SHOPPING};
-
-typedef struct {
-  int category;
-  int value;
-} Expense;
-
-Expense *expenses;
-int expensesCount;
-
-int budgetMax;
-int budgetCurrent;
-
-//------------------------------------------------------------------------------------
-// Program main entry point
-//------------------------------------------------------------------------------------
-int main()
-{   
+int main() {   
   // Initialization
   //---------------------------------------------------------------------------------------
   const int screenWidth = 800;
@@ -66,8 +48,7 @@ int main()
   Vector2 panelScroll = { 0, 0 };
   
   // populate expenses
-  for (int i = 0; i < expensesCount; ++i) {
-    Expense expense;
+  for (int i = 0; i < expensesCount; ++i)  {
     expenses[i].category = 0;
     expenses[i].value = 50 * i;
   }
@@ -75,9 +56,8 @@ int main()
   SetTargetFPS(60);
   //---------------------------------------------------------------------------------------
   
-  // Main game loop
-  while (!WindowShouldClose()) // Detect window close button or ESC key
-  {
+  // Main loop
+  while (!WindowShouldClose()) {
     // Update
     //----------------------------------------------------------------------------------
     float angleEnd = 180.0f + (((float)budgetCurrent / (float)budgetMax) * 360.0f);
@@ -91,8 +71,7 @@ int main()
       
       if (expenseCategoryActive) {GuiLock();}
       
-      if (GuiValueBox((Rectangle){600, 50, 100, 50}, "Budget", &budgetMax, 0, 10000, budgetMaxActive)) 
-      {
+      if (GuiValueBox((Rectangle){600, 50, 100, 50}, "Budget", &budgetMax, 0, 10000, budgetMaxActive))  {
         budgetMaxActive = !budgetMaxActive;
         budgetCurrent = budgetMax;
         budgetStrWidth = MeasureText(TextFormat("$%d", budgetMax), 40);
@@ -102,13 +81,11 @@ int main()
       DrawRing(ringPosition, 80.0f, 190.0f, angleStart, angleEnd - 360.0f, 0, Fade(MAROON, 0.3)); // Expenses
       DrawText(TextFormat("$%d", budgetCurrent), ringPosition.x - (budgetStrWidth / 2), ringPosition.y - 15, 40, GRAY);
       
-      if (GuiValueBox((Rectangle){550, 180, 200, 50}, "Expense", &expenseValue, 0, budgetMax, expenseValueActive)) 
-      {
+      if (GuiValueBox((Rectangle){550, 180, 200, 50}, "Expense", &expenseValue, 0, budgetMax, expenseValueActive)) {
         expenseValueActive = !expenseValueActive;
       }
       
-      if (GuiButton((Rectangle){550, 240, 200, 50}, "Apply")) 
-      {
+      if (GuiButton((Rectangle){550, 240, 200, 50}, "Apply")) {
         budgetCurrent -= expenseValue;
         Expense *temp = realloc(expenses, sizeof(Expense) * (expensesCount + 1));
         
@@ -122,8 +99,7 @@ int main()
       
       // Draw dropdown last
       if (expenseCategoryActive) {GuiUnlock();}
-      if (GuiDropdownBox((Rectangle){550, 120, 200, 50}, "Essentials;Entertainment;Investing;Shopping", &expenseCategory, expenseCategoryActive))
-      {
+      if (GuiDropdownBox((Rectangle){550, 120, 200, 50}, "Essentials;Entertainment;Investing;Shopping", &expenseCategory, expenseCategoryActive)) {
         expenseCategoryActive = !expenseCategoryActive;
         printf("CATEGORY: %d\n", expenseCategory);
       }
@@ -137,7 +113,7 @@ int main()
         for (int i = 0; i < expensesCount; ++i) {
           GuiPanel((Rectangle){panelRec.x + panelScroll.x, panelRec.y + panelScroll.y + (40 * i), panelContentRec.width, 40});
           
-          // TO-DO; Simplify
+          // TO-DO: Simplify (array of strings with categories then simple for loop?)
           switch (expenses[i].category) {
             case ESSENTIALS:
               DrawText("Essentials", panelRec.x + panelScroll.x + 2, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
@@ -156,26 +132,17 @@ int main()
           }
           DrawText(TextFormat("Value: %d", expenses[i].value), panelRec.x + panelScroll.x + 5 + 250, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
           
-          if (GuiButton((Rectangle){750, panelRec.y + 5 + panelScroll.y + (40 * i), 30, 30}, "X"))
-          {
-            budgetCurrent += expenses[i].value;
-            
-            --expensesCount;
-            for (int j = i; j < expensesCount; ++j) 
-            {
-              expenses[i] = expenses[i + 1];
-            }
+          if (GuiButton((Rectangle){750, panelRec.y + 5 + panelScroll.y + (40 * i), 30, 30}, "X")) {
+            expenseRemove(i);
           }
         }
       EndScissorMode();
       
-      if (GuiButton((Rectangle){550, 380, 90, 50}, "save")) 
-      {
+      if (GuiButton((Rectangle){550, 380, 90, 50}, "save")) {
         save();
       }
       
-      if (GuiButton((Rectangle){660, 380, 90, 50}, "load")) 
-      {
+      if (GuiButton((Rectangle){660, 380, 90, 50}, "load")) {
         load();
       }
       
@@ -184,16 +151,22 @@ int main()
     //----------------------------------------------------------------------------------
   }
 
-  // De-Initialization
-  //--------------------------------------------------------------------------------------
-  CloseWindow();        // Close window and OpenGL context
-  //--------------------------------------------------------------------------------------
+  CloseWindow();
 
   return 0;
 }
 
-void save()
-{
+void expenseRemove(int index) {
+  budgetCurrent += expenses[index].value;
+  
+  --expensesCount;
+  for (int i = index; i < expensesCount; ++i) {
+    expenses[i] = expenses[i + 1];
+  }
+}
+
+// TO-DO: Simplify
+void save() {
   FILE *fp = fopen("expenses.txt", "w");
   fprintf(fp, "%d\n%d\n", budgetMax, expensesCount);
   fclose(fp);
@@ -206,8 +179,8 @@ void save()
   fclose(fp);
 }
 
-void load() 
-{
+// TO-DO: Simplify
+void load() {
   FILE *fp = fopen("expenses.txt", "r");
   
   fseek(fp, 0, SEEK_END);
@@ -229,8 +202,7 @@ void load()
   expenses = malloc(sizeof(Expense) * expensesCount);
   
   int j = 0;
-  for (int i = 1; i < lines - 2; i += 2)
-  {
+  for (int i = 1; i < lines - 2; i += 2) {
     printf("%d) %s: %s\n", i, values[i + 1], values[i + 2]);
     expenses[j].category = TextToInteger(values[i + 1]);
     expenses[j].value = TextToInteger(values[i + 2]);
