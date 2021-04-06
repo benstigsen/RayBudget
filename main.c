@@ -25,6 +25,14 @@ int main() {
   GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
   
   // Values
+  categories = malloc(categoriesCount * sizeof(*categories));
+  strcpy(categories[0], "Essentials");
+  strcpy(categories[1], "Entertainment");
+  strcpy(categories[2], "Investing");
+  strcpy(categories[3], "Shopping");
+  
+  categoriesDropdown = getCategoryString(categories, categoriesCount, ';');
+  
   int budgetStrWidth  = MeasureText(TextFormat("$%d", budgetCurrent), 40);
   
   int expenseCategory = 0;
@@ -82,7 +90,7 @@ int main() {
       
       // Draw dropdown last
       if (expenseCategoryActive) {GuiUnlock();}
-      if (GuiDropdownBox((Rectangle){550, 120, 200, 50}, "Essentials;Entertainment;Investing;Shopping", &expenseCategory, expenseCategoryActive)) {
+      if (GuiDropdownBox((Rectangle){550, 120, 200, 50}, categoriesDropdown, &expenseCategory, expenseCategoryActive)) {
         expenseCategoryActive = !expenseCategoryActive;
       }
       
@@ -94,22 +102,8 @@ int main() {
         
         for (int i = 0; i < expensesCount; ++i) {
           GuiPanel((Rectangle){panelRec.x + panelScroll.x, panelRec.y + panelScroll.y + (40 * i), panelContentRec.width, 40});
-          
-          // TO-DO: Simplify (array of strings with categories then simple for loop?)
-          switch (expenses[i].category) {
-            case ESSENTIALS:
-              DrawText("Essentials", panelRec.x + panelScroll.x + 5, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
-              break;
-            case ENTERTAINMENT:
-              DrawText("Entertainment", panelRec.x + panelScroll.x + 5, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
-              break;
-            case INVESTMENT:
-              DrawText("Investing", panelRec.x + panelScroll.x + 5, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
-              break;
-            case SHOPPING:
-              DrawText("Shopping", panelRec.x + panelScroll.x + 5, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
-              break;
-          }
+
+          DrawText(categories[(expenses[i].category)], panelRec.x + panelScroll.x + 5, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
           DrawText(TextFormat("-$%d", expenses[i].value), panelRec.x + panelScroll.x + 5 + 250, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
           
           if (GuiButton((Rectangle){750, panelRec.y + 5 + panelScroll.y + (40 * i), 30, 30}, "X")) {
@@ -125,7 +119,6 @@ int main() {
       if (GuiButton((Rectangle){660, 380, 90, 50}, "load")) {
         load();
       }
-      
       
     EndDrawing();
     //----------------------------------------------------------------------------------
@@ -211,3 +204,23 @@ void load() {
   }
 }
 
+// Join dynamic array of fixed length strings
+char *getCategoryString(char (*textList)[MAX_CATEGORY_LENGTH], int count, char delimiter) {
+  static char result[MAX_TEXT_BUFFER] = { 0 };
+  memset(result, 0, MAX_TEXT_BUFFER);
+  
+  int pos = 0;
+  for (int i = 0; i < count; ++i) {
+    for (int j = 0; j < MAX_CATEGORY_LENGTH; ++j) {
+      if (textList[i][j] == '\0') {break;}
+      
+      result[pos++] = textList[i][j];
+    }
+    
+    result[pos++] = delimiter;
+  }
+  
+  result[pos - 1] = '\0';
+  
+  return result;
+}
