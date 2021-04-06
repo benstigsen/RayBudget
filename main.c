@@ -47,7 +47,7 @@ int main() {
   float   angleStart   = 180.0f;
   Vector2 ringPosition = {200, 200};
   
-  Rectangle panelRec        = {0, 430, screenWidth, 170};
+  Rectangle panelRec        = {0, 430, 500, 170};
   Rectangle panelContentRec = {0, 0, screenWidth - 12, 300};
   Vector2   panelScroll     = { 0, 0 };
   
@@ -79,18 +79,18 @@ int main() {
       DrawRing(ringPosition, 80.0f, 190.0f, angleStart, angleEnd - 360.0f, 0, Fade(MAROON, 0.3)); // Expenses
       DrawText(TextFormat("$%d", budgetCurrent), ringPosition.x - 50, ringPosition.y - 15, 40, GRAY);
       
-      if (GuiValueBox((Rectangle){550, 180, 200, 50}, "Expense", &expenseValue, 0, budgetMax, expenseValueActive)) {
+      if (GuiValueBox((Rectangle){550, 160, 200, 40}, "Expense", &expenseValue, 0, budgetMax, expenseValueActive)) {
         expenseValueActive = !expenseValueActive;
       }
       
-      if (GuiButton((Rectangle){550, 240, 200, 50}, "Apply")) {
+      if (GuiButton((Rectangle){550, 210, 200, 40}, "Apply")) {
         expenseAdd(expenseCategory, expenseValue);
         budgetCalculate();
       }
       
       // Draw dropdown last
       if (expenseCategoryActive) {GuiUnlock();}
-      if (GuiDropdownBox((Rectangle){550, 120, 200, 50}, categoriesDropdown, &expenseCategory, expenseCategoryActive)) {
+      if (GuiDropdownBox((Rectangle){550, 110, 200, 40}, categoriesDropdown, &expenseCategory, expenseCategoryActive)) {
         expenseCategoryActive = !expenseCategoryActive;
       }
       
@@ -106,19 +106,18 @@ int main() {
           DrawText(categories[(expenses[i].category)], panelRec.x + panelScroll.x + 5, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
           DrawText(TextFormat("-$%d", expenses[i].value), panelRec.x + panelScroll.x + 5 + 250, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
           
-          if (GuiButton((Rectangle){750, panelRec.y + 5 + panelScroll.y + (40 * i), 30, 30}, "X")) {
+          if (GuiButton((Rectangle){panelRec.width - 45, panelRec.y + 5 + panelScroll.y + (40 * i), 30, 30}, "X")) {
             expenseRemove(i);
           }
         }
       EndScissorMode();
       
-      if (GuiButton((Rectangle){550, 380, 90, 50}, "save")) {
-        save();
-      }
       
-      if (GuiButton((Rectangle){660, 380, 90, 50}, "load")) {
-        load();
-      }
+      // Save
+      if (GuiButton((Rectangle){505, 560, 140, 30}, "save")) {save();}
+      
+      // Load
+      if (GuiButton((Rectangle){655, 560, 140, 30}, "load")) {load();}
       
     EndDrawing();
     //----------------------------------------------------------------------------------
