@@ -1,6 +1,8 @@
 // Functions
 void save();
 void load();
+void budgetCalculate();
+void expenseAdd(int category, int value);
 void expenseRemove(int index);
 
 // Enums
@@ -15,7 +17,7 @@ typedef struct {
 
 // Variables
 Expense *expenses;
-int expensesCount;
+int expensesCount = 0;
 
-int budgetMax;
-int budgetCurrent;
+int budgetMax = 1000;
+int budgetCurrent = 1000;
