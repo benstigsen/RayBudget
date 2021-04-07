@@ -5,13 +5,8 @@
 #include "raygui.h"
 
 /* 
-  TO-DO:
-    - Add expense category color (on wheel and scrollable panel)
-    - Add the ability to change expense category and value in the expense list
-    - Fix text alignment and GUI element placement
-    - Change saving / loading system 
-    - Remove debug printf()
-    - Refactor
+  - Fix text alignment and GUI element placement
+  - Refactor
 */
 
 int main() {   
@@ -26,10 +21,10 @@ int main() {
   
   // Values
   categories = malloc(4 * sizeof(*categories));
-  categoriesDropdown = categoryString(categories, ';');
   
-  printf("\n\nLOADING\n\n");
+  // Initialize
   load();
+  categoryDropdownUpdate();
   
   int budgetStrWidth  = MeasureText(TextFormat("$%d", budgetCurrent), 40);
   
@@ -46,7 +41,7 @@ int main() {
   Vector2 ringPosition = {200, 200};
   
   Rectangle panelRec        = {0, 430, 500, 170};
-  Rectangle panelContentRec = {0, 0, screenWidth - 12, 300};
+  Rectangle panelContentRec = {0, 0, panelRec.width - 12, 300};
   Vector2   panelScroll     = { 0, 0 };
   
   SetTargetFPS(60);
@@ -96,15 +91,14 @@ int main() {
       DrawText("Categories", 715, 410, 15, GRAY);
       for (int i = 0; i < 4; ++i) {
         if (GuiTextBox((Rectangle){505, 430 + (43 * i), 290, 38}, categories[i], 20, categoryStates[i])) {
-          categoryString();
+          categoryDropdownUpdate();
           categoryStates[i] = !categoryStates[i];
         }
       }
-      
-      // Print expenses
+
+      // Draw list of expenses
       Rectangle view = GuiScrollPanel(panelRec, panelContentRec, &panelScroll);
       
-      // Draw list of expenses
       BeginScissorMode(view.x, view.y, view.width, view.height);
         
         for (int i = 0; i < expensesCount; ++i) {
@@ -117,6 +111,7 @@ int main() {
             expenseRemove(i);
           }
         }
+        
       EndScissorMode();
       
       // Save
@@ -137,24 +132,34 @@ int main() {
   return 0;
 }
 
-// TO-DO: Simplify
 void save() {
   FILE *fp = fopen("expenses.txt", "w");
-  printf("----\nHey\n----");
-  fprintf(fp, "%s\n%s\n%s\n%s\n%d\n%d\n", categories[0], categories[1], categories[2], categories[3], budgetMax, expensesCount);
-  printf("----\nHey\n----");
   fclose(fp);
   
   fp = fopen("expenses.txt", "a");
-  for (int i = 0; i < expensesCount; ++i) 
-  {
+  fprintf(fp, "%d\n", budgetMax);
+  
+  for (int i = 0; i < 4; ++i) {
+    if (TextLength(categories[i]) >= 1) {
+      fprintf(fp, "%s\n", categories[i]);
+    } else {
+      fprintf(fp, " \n");
+    }
+  }
+  
+  fprintf(fp, "%d\n", expensesCount);
+  for (int i = 0; i < expensesCount; ++i) {
     fprintf(fp, "%d\n%d\n", expenses[i].category, expenses[i].value);
   }
   fclose(fp);
 }
 
-// TO-DO: Simplify
 void load() {
+  if (!FileExists("expenses.txt")) {
+    reset(); 
+    return;
+  }
+  
   char *data = LoadFileText("expenses.txt");
   
   int count;
@@ -170,41 +175,43 @@ void load() {
     }
     
     // Expenses
-    expensesCount = (count - 5) / 2;
+    expensesCount = TextToInteger(lines[5]);
     expenses = malloc(expensesCount * sizeof(Expense));
     
-    for (int i = 5, j = 0; i < count-2; i += 2, ++j) {
+    for (int i = 6, j = 0; (i < count) && (j < expensesCount); i += 2, ++j) {
       expenses[j].category = TextToInteger(lines[i]);
       expenses[j].value = TextToInteger(lines[i+1]);
       
       budgetCurrent -= expenses[j].value;
     }
     
-    categoryString();
+    categoryDropdownUpdate();
   } else {
     reset();
   }
 }
 
 void reset() {
-  printf("\n\nSTEP 1\n\n");
   expenses = realloc(expenses, sizeof(Expense));
   expensesCount = 0;
   budgetMax = 1000;
   budgetCurrent = 1000;
-
-  printf("\n\nSTEP 2\n\n");
-  strcpy(categories[0], "Essentials");
-  strcpy(categories[1], "Investing");
-  strcpy(categories[2], "Entertainment");
-  strcpy(categories[3], "Shopping");
   
-  printf("\n\nSTEP 3\n\n");
-  save();
+  const char *categoriesDefault[] = {"Essentials", "Investing", "Entertainment", "Shopping"};
+  
+  for (int i = 0; i < 4; ++i) {
+    strcpy(categories[i], categoriesDefault[i]);
+  }
+  
+  categoryDropdownUpdate();
 }
 
 void categoryAdd(int index, char *name) {
   strcpy(categories[index], name);
+}
+
+void categoryDropdownUpdate() {
+  strcpy(categoriesDropdown, TextFormat("%s;%s;%s;%s", categories[0], categories[1], categories[2], categories[3]));
 }
 
 void budgetCalculate() {
@@ -235,23 +242,3 @@ void expenseRemove(int index) {
   }
 }
 
-// Join dynamic array of fixed length strings
-char *categoryString() {
-  static char result[MAX_TEXT_BUFFER] = { 0 };
-  memset(result, 0, MAX_TEXT_BUFFER);
-  
-  int pos = 0;
-  for (int i = 0; i < 4; ++i) {
-    for (int j = 0; j < MAX_CATEGORY_NAME_LENGTH; ++j) {
-      if (categories[i][j] == '\0') {break;}
-      
-      result[pos++] = categories[i][j];
-    }
-    
-    result[pos++] = ';';
-  }
-  
-  result[pos - 1] = '\0';
-  
-  return result;
-}

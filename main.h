@@ -11,7 +11,7 @@ void load();
 void reset();
 
 void categoryAdd();
-char *categoryString();
+void categoryDropdownUpdate();
 
 void budgetCalculate();
 
@@ -30,7 +30,7 @@ Expense *expenses;
 bool categoryStates[4];
 
 char (*categories)[MAX_CATEGORY_NAME_LENGTH];
-char *categoriesDropdown;
+char categoriesDropdown[(MAX_CATEGORY_NAME_LENGTH * 4) + 3];
 
 int expensesCount = 0;
 
