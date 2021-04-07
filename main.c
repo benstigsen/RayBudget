@@ -7,7 +7,6 @@
 /* 
   TO-DO:
     - Add expense category color (on wheel and scrollable panel)
-    - Add the ability to add category
     - Add the ability to change expense category and value in the expense list
     - Fix text alignment and GUI element placement
     - Change saving / loading system 
@@ -23,15 +22,14 @@ int main() {
   
   InitWindow(screenWidth, screenHeight, "RayBudget");
   GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+  GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
   
   // Values
-  categories = malloc(categoriesCount * sizeof(*categories));
-  strcpy(categories[0], "Essentials");
-  strcpy(categories[1], "Entertainment");
-  strcpy(categories[2], "Investing");
-  strcpy(categories[3], "Shopping");
+  categories = malloc(4 * sizeof(*categories));
+  categoriesDropdown = categoryString(categories, ';');
   
-  categoriesDropdown = getCategoryString(categories, categoriesCount, ';');
+  printf("\n\nLOADING\n\n");
+  load();
   
   int budgetStrWidth  = MeasureText(TextFormat("$%d", budgetCurrent), 40);
   
@@ -94,6 +92,15 @@ int main() {
         expenseCategoryActive = !expenseCategoryActive;
       }
       
+      // Draw categories
+      DrawText("Categories", 715, 410, 15, GRAY);
+      for (int i = 0; i < 4; ++i) {
+        if (GuiTextBox((Rectangle){505, 430 + (43 * i), 290, 38}, categories[i], 20, categoryStates[i])) {
+          categoryString();
+          categoryStates[i] = !categoryStates[i];
+        }
+      }
+      
       // Print expenses
       Rectangle view = GuiScrollPanel(panelRec, panelContentRec, &panelScroll);
       
@@ -104,7 +111,7 @@ int main() {
           GuiPanel((Rectangle){panelRec.x + panelScroll.x, panelRec.y + panelScroll.y + (40 * i), panelContentRec.width, 40});
 
           DrawText(categories[(expenses[i].category)], panelRec.x + panelScroll.x + 5, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
-          DrawText(TextFormat("-$%d", expenses[i].value), panelRec.x + panelScroll.x + 5 + 250, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
+          DrawText(TextFormat("-$%d", expenses[i].value), panelRec.x + panelScroll.x + 340, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
           
           if (GuiButton((Rectangle){panelRec.width - 45, panelRec.y + 5 + panelScroll.y + (40 * i), 30, 30}, "X")) {
             expenseRemove(i);
@@ -112,12 +119,14 @@ int main() {
         }
       EndScissorMode();
       
-      
       // Save
-      if (GuiButton((Rectangle){505, 560, 140, 30}, "save")) {save();}
+      if (GuiButton((Rectangle){screenWidth - 240, 10, 70, 20}, "save")) {save();}
       
       // Load
-      if (GuiButton((Rectangle){655, 560, 140, 30}, "load")) {load();}
+      if (GuiButton((Rectangle){screenWidth - 160, 10, 70, 20}, "load")) {load();}
+      
+      // Reset
+      if (GuiButton((Rectangle){screenWidth - 80, 10, 70, 20}, "reset")) {reset();}
       
     EndDrawing();
     //----------------------------------------------------------------------------------
@@ -126,6 +135,76 @@ int main() {
   CloseWindow();
 
   return 0;
+}
+
+// TO-DO: Simplify
+void save() {
+  FILE *fp = fopen("expenses.txt", "w");
+  printf("----\nHey\n----");
+  fprintf(fp, "%s\n%s\n%s\n%s\n%d\n%d\n", categories[0], categories[1], categories[2], categories[3], budgetMax, expensesCount);
+  printf("----\nHey\n----");
+  fclose(fp);
+  
+  fp = fopen("expenses.txt", "a");
+  for (int i = 0; i < expensesCount; ++i) 
+  {
+    fprintf(fp, "%d\n%d\n", expenses[i].category, expenses[i].value);
+  }
+  fclose(fp);
+}
+
+// TO-DO: Simplify
+void load() {
+  char *data = LoadFileText("expenses.txt");
+  
+  int count;
+  const char **lines = TextSplit(data, '\n', &count);
+  
+  if (count >= 5) {
+    // Budget max
+    budgetMax = TextToInteger(lines[0]);
+    
+    // Categories
+    for (int i = 1; i < 5; ++i) {
+      strcpy(categories[i-1], lines[i]);
+    }
+    
+    // Expenses
+    expensesCount = (count - 5) / 2;
+    expenses = malloc(expensesCount * sizeof(Expense));
+    
+    for (int i = 5, j = 0; i < count-2; i += 2, ++j) {
+      expenses[j].category = TextToInteger(lines[i]);
+      expenses[j].value = TextToInteger(lines[i+1]);
+      
+      budgetCurrent -= expenses[j].value;
+    }
+    
+    categoryString();
+  } else {
+    reset();
+  }
+}
+
+void reset() {
+  printf("\n\nSTEP 1\n\n");
+  expenses = realloc(expenses, sizeof(Expense));
+  expensesCount = 0;
+  budgetMax = 1000;
+  budgetCurrent = 1000;
+
+  printf("\n\nSTEP 2\n\n");
+  strcpy(categories[0], "Essentials");
+  strcpy(categories[1], "Investing");
+  strcpy(categories[2], "Entertainment");
+  strcpy(categories[3], "Shopping");
+  
+  printf("\n\nSTEP 3\n\n");
+  save();
+}
+
+void categoryAdd(int index, char *name) {
+  strcpy(categories[index], name);
 }
 
 void budgetCalculate() {
@@ -156,67 +235,20 @@ void expenseRemove(int index) {
   }
 }
 
-// TO-DO: Simplify
-void save() {
-  FILE *fp = fopen("expenses.txt", "w");
-  fprintf(fp, "%d\n%d\n", budgetMax, expensesCount);
-  fclose(fp);
-  
-  fp = fopen("expenses.txt", "a");
-  for (int i = 0; i < expensesCount; ++i) 
-  {
-    fprintf(fp, "%d\n%d\n", expenses[i].category, expenses[i].value);
-  }
-  fclose(fp);
-}
-
-// TO-DO: Simplify
-void load() {
-  FILE *fp = fopen("expenses.txt", "r");
-  
-  fseek(fp, 0, SEEK_END);
-  int fsize = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-  
-  char *content = malloc(fsize + 1);
-  
-  fread(content, 1, fsize, fp);
-  fclose(fp);
-  
-  int lines;
-  const char **values = TextSplit(content, '\n', &lines);
-
-  budgetMax = TextToInteger(values[0]);
-  budgetCurrent = budgetMax;
-  expensesCount = TextToInteger(values[1]);
-
-  expenses = malloc(sizeof(Expense) * expensesCount);
-  
-  int j = 0;
-  for (int i = 1; i < lines - 2; i += 2) {
-    printf("%d) %s: %s\n", i, values[i + 1], values[i + 2]);
-    expenses[j].category = TextToInteger(values[i + 1]);
-    expenses[j].value = TextToInteger(values[i + 2]);
-    
-    budgetCurrent -= expenses[j].value;
-    ++j;
-  }
-}
-
 // Join dynamic array of fixed length strings
-char *getCategoryString(char (*textList)[MAX_CATEGORY_LENGTH], int count, char delimiter) {
+char *categoryString() {
   static char result[MAX_TEXT_BUFFER] = { 0 };
   memset(result, 0, MAX_TEXT_BUFFER);
   
   int pos = 0;
-  for (int i = 0; i < count; ++i) {
-    for (int j = 0; j < MAX_CATEGORY_LENGTH; ++j) {
-      if (textList[i][j] == '\0') {break;}
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < MAX_CATEGORY_NAME_LENGTH; ++j) {
+      if (categories[i][j] == '\0') {break;}
       
-      result[pos++] = textList[i][j];
+      result[pos++] = categories[i][j];
     }
     
-    result[pos++] = delimiter;
+    result[pos++] = ';';
   }
   
   result[pos - 1] = '\0';
