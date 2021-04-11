@@ -134,11 +134,12 @@ int main() {
 
 void save() {
   FILE *fp = fopen("expenses.txt", "w");
-  fclose(fp);
-  
-  fp = fopen("expenses.txt", "a");
-  fprintf(fp, "%d\n", budgetMax);
-  
+
+  if (fp == NULL) {
+  	fclose(fp);
+  	exit(1);
+  }
+
   for (int i = 0; i < 4; ++i) {
     if (TextLength(categories[i]) >= 1) {
       fprintf(fp, "%s\n", categories[i]);
