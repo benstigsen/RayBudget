@@ -1,6 +1,7 @@
 #include "main.h"
+#include "data.h"
 #include "raylib.h"
-#include "jsmn.h"
+#include "standard.h"
 
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
@@ -10,11 +11,11 @@
   - Refactor
 */
 
-int main() {   
+i32 main() {
   // Initialization
   //---------------------------------------------------------------------------------------
-  const int screenWidth = 800;
-  const int screenHeight = 600;
+  const i32 screenWidth = 800;
+  const i32 screenHeight = 600;
   
   InitWindow(screenWidth, screenHeight, "RayBudget");
   GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
@@ -24,27 +25,16 @@ int main() {
   categories = malloc(4 * sizeof(*categories));
   
   // Initialize
-  loadJSON();
-  //load();
+  load();
   categoryDropdownUpdate();
   
-  int budgetStrWidth  = MeasureText(TextFormat("$%d", budgetCurrent), 40);
-  
-  int expenseCategory = 0;
-  int expenseValue    = 0;
-  
-  // Booleans
-  bool budgetMaxActive       = true;
-  bool expenseCategoryActive = false;
-  bool expenseValueActive    = false;
-  
   // Widget Properties
-  float   angleStart   = 180.0f;
+  f32     angleStart   = 180.0f;
   Vector2 ringPosition = {200, 200};
   
   Rectangle panelRec        = {0, 430, 500, 170};
   Rectangle panelContentRec = {0, 0, panelRec.width - 12, 300};
-  Vector2   panelScroll     = { 0, 0 };
+  Vector2   panelScroll     = {0, 0};
   
   SetTargetFPS(60);
   //---------------------------------------------------------------------------------------
@@ -53,7 +43,7 @@ int main() {
   while (!WindowShouldClose()) {
     // Update
     //----------------------------------------------------------------------------------
-    float angleEnd = 180.0f + (((float)budgetCurrent / (float)budgetMax) * 360.0f);
+    f32 angleEnd = 180.0f + (((f32)budgetCurrent / (f32)budgetMax) * 360.0f);
     //----------------------------------------------------------------------------------
 
     // Draw
@@ -68,7 +58,6 @@ int main() {
       if (GuiValueBox((Rectangle){600, 50, 100, 50}, "Budget", &budgetMax, 0, 10000, budgetMaxActive))  {
         budgetMaxActive = !budgetMaxActive;
         budgetCalculate();
-        budgetStrWidth = MeasureText(TextFormat("$%d", budgetCurrent), 40);
       }
       
       // Draw rings to show budget
@@ -95,7 +84,7 @@ int main() {
       
       // Draw categories
       DrawText("Categories", 715, 410, 15, GRAY);
-      for (int i = 0; i < 4; ++i) {
+      for (u08 i = 0; i < 4; ++i) {
         if (GuiTextBox((Rectangle){505, 430 + (43 * i), 290, 38}, categories[i], 20, categoryStates[i])) {
           categoryDropdownUpdate();
           categoryStates[i] = !categoryStates[i];
@@ -108,7 +97,7 @@ int main() {
       // Draw expense panel list
       BeginScissorMode(view.x, view.y, view.width, view.height);
         
-        for (int i = 0; i < expensesCount; ++i) {
+        for (u32 i = 0; i < expenseCount; ++i) {
           GuiPanel((Rectangle){panelRec.x + panelScroll.x, panelRec.y + panelScroll.y + (40 * i), panelContentRec.width, 40});
 
           DrawText(categories[(expenses[i].category)], panelRec.x + panelScroll.x + 5, panelRec.y + 5 + panelScroll.y + (40 * i), 30, GRAY);
@@ -139,7 +128,7 @@ int main() {
   return 0;
 }
 
-void save() {
+nil save() {
   FILE *fp = fopen("expenses.txt", "w");
 
   if (fp == NULL) {
@@ -147,7 +136,9 @@ void save() {
   	exit(1);
   }
 
-  for (int i = 0; i < 4; ++i) {
+  fprintf(fp, "%d\n", budgetMax);
+
+  for (u08 i = 0; i < 4; ++i) {
     if (TextLength(categories[i]) >= 1) {
       fprintf(fp, "%s\n", categories[i]);
     } else {
@@ -155,103 +146,39 @@ void save() {
     }
   }
   
-  fprintf(fp, "%d\n", expensesCount);
-  for (int i = 0; i < expensesCount; ++i) {
+  fprintf(fp, "%d\n", expenseCount);
+  for (u32 i = 0; i < expenseCount; ++i) {
     fprintf(fp, "%d\n%d\n", expenses[i].category, expenses[i].value);
   }
+  
   fclose(fp);
 }
 
-void loadJSON() {
-  int r;
-  char *data;
-  
-  jsmn_parser parser;
-  jsmntok_t tokens[100];
-  
-  jsmn_init(&parser);
-  
-  data = LoadFileText("expenses.json");
-  r = jsmn_parse(&parser, data, strlen(data), tokens, sizeof(tokens) / sizeof(tokens[0]));
-  
-  printf("READING STUFF!\n");
-  
-  if (r < 0) {
-    printf("SOME ERROR, FUCK!\n");
-  }
-  
-  if (r < 1 || tokens[0].type != JSMN_OBJECT) {
-    printf("ERROR: Expected object\n");
-  }
-  
-  for (int i = 0; i < r; ++i) {
-    if (jsoneq(data, &tokens[i], "expenses") == 0) 
-    {
-      jsmntok_t token = tokens[i+1];
-      expensesCount = TextToInteger(TextFormat("%.*s", token.end - token.start, data + token.start));
-    }
-    else if (jsoneq(data, &tokens[i], "max") == 0)
-    {
-      jsmntok_t token = tokens[i+1];
-      budgetMax = TextToInteger(TextFormat("%.*s", token.end - token.start, data + token.start));
-    }
-    else if (jsoneq(data, &tokens[i], "categories") == 0)
-    {
-      if (tokens[i+1].type != JSMN_ARRAY) {
-        printf("ERROR: 'categories' in JSON needs to be an array of strings!\n");
-      }
-      
-      for (int j = 0; (j < tokens[i+1].size) && (j < 4); ++j) {
-        jsmntok_t token = tokens[i+j+2];
-        //strncpy(categories[j], TextFormat("%.*s", token.end - token.start, data + token.start), 25);
-        strcpy(categories[j], TextFormat("%.*s", token.end - token.start, data + token.start));
-      }
-      
-      i += tokens[i+1].size + 1;
-    }
-  }
-
-  printf("EXPENSES: %d\n", expensesCount);
-  printf("MAX: %d\n", budgetMax);
-  
-  for (int i = 0; i < 4; ++i) {
-    printf("%d) %s\n", i, categories[i]);
-  }
-  
-  categoryDropdownUpdate();
-  printf("TEST: %s\n", categoriesDropdown);
-  //printf("CATEGORY 1: %s\n", categories[0]);
-  
-}
-
-void load() {}
-
-/*
-void load() {
+nil load() {
   if (!FileExists("expenses.txt")) {
     reset(); 
     return;
   }
   
-  char *data = LoadFileText("expenses.txt");
+  str data = LoadFileText("expenses.txt");
   
-  int count;
-  const char **lines = TextSplit(data, '\n', &count);
+  i32 count;
+  const str *lines = TextSplit(data, '\n', &count);
   
   if (count >= 5) {
     // Budget max
     budgetMax = TextToInteger(lines[0]);
     
     // Categories
-    for (int i = 1; i < 5; ++i) {
+    for (u08 i = 1; i < 5; ++i) {
       strcpy(categories[i-1], lines[i]);
     }
     
     // Expenses
-    expensesCount = TextToInteger(lines[5]);
-    expenses = malloc(expensesCount * sizeof(Expense));
+    expenseCount = TextToInteger(lines[5]);
+    expenses = malloc(expenseCount * sizeof(Expense));
     
-    for (int i = 6, j = 0; (i < count) && (j < expensesCount); i += 2, ++j) {
+    for (u32 i = 6, j = 0; (i < count) && (j < expenseCount); i += 2, ++j) {
       expenses[j].category = TextToInteger(lines[i]);
       expenses[j].value = TextToInteger(lines[i+1]);
       
@@ -263,55 +190,56 @@ void load() {
     reset();
   }
 }
-*/
 
-void reset() {
+nil reset() {
   expenses = realloc(expenses, sizeof(Expense));
-  expensesCount = 0;
+  expenseCount = 0;
   budgetMax = 1000;
   budgetCurrent = 1000;
   
-  const char *categoriesDefault[] = {"Essentials", "Investing", "Entertainment", "Shopping"};
+  const str categoriesDefault[] = {"Essentials", "Investing", "Entertainment", "Shopping"};
   
-  for (int i = 0; i < 4; ++i) {
+  for (u08 i = 0; i < 4; ++i) {
     strcpy(categories[i], categoriesDefault[i]);
   }
   
   categoryDropdownUpdate();
 }
 
-void categoryAdd(int index, char *name) {
+/*
+nil categoryAdd(u32 index, str name) {
   strcpy(categories[index], name);
 }
+*/
 
-void categoryDropdownUpdate() {
+nil categoryDropdownUpdate() {
   strcpy(categoriesDropdown, TextFormat("%s;%s;%s;%s", categories[0], categories[1], categories[2], categories[3]));
 }
 
-void budgetCalculate() {
+nil budgetCalculate() {
   budgetCurrent = budgetMax;
   
-  for (int i = 0; i < expensesCount; ++i) {
+  for (u32 i = 0; i < expenseCount; ++i) {
     budgetCurrent -= expenses[i].value;
   }
 }
 
-void expenseAdd(int category, int value) {
-  Expense *temp = realloc(expenses, sizeof(Expense) * (expensesCount + 1));
+nil expenseAdd(u08 category, u32 value) {
+  Expense *temp = realloc(expenses, sizeof(Expense) * (expenseCount + 1));
         
   if (temp != NULL) {
     expenses = temp;
-    expenses[expensesCount].category = category;
-    expenses[expensesCount].value = value;
-    ++expensesCount;
+    expenses[expenseCount].category = category;
+    expenses[expenseCount].value = value;
+    ++expenseCount;
   }
 }
 
-void expenseRemove(int index) {
+nil expenseRemove(u32 index) {
   budgetCurrent += expenses[index].value;
   
-  --expensesCount;
-  for (int i = index; i < expensesCount; ++i) {
+  --expenseCount;
+  for (u32 i = index; i < expenseCount; ++i) {
     expenses[i] = expenses[i + 1];
   }
 }
