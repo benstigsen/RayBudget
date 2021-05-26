@@ -1,5 +1,6 @@
 #include "main.h"
 #include "raylib.h"
+#include "jsmn.h"
 
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
@@ -23,7 +24,8 @@ int main() {
   categories = malloc(4 * sizeof(*categories));
   
   // Initialize
-  load();
+  loadJSON();
+  //load();
   categoryDropdownUpdate();
   
   int budgetStrWidth  = MeasureText(TextFormat("$%d", budgetCurrent), 40);
@@ -62,20 +64,24 @@ int main() {
       
       if (expenseCategoryActive) {GuiLock();}
       
+      // Show budget valuebox
       if (GuiValueBox((Rectangle){600, 50, 100, 50}, "Budget", &budgetMax, 0, 10000, budgetMaxActive))  {
         budgetMaxActive = !budgetMaxActive;
         budgetCalculate();
         budgetStrWidth = MeasureText(TextFormat("$%d", budgetCurrent), 40);
       }
       
+      // Draw rings to show budget
       DrawRing(ringPosition, 80.0f, 190.0f, angleStart, angleEnd, 0, Fade(GREEN, 0.3));           // Available
       DrawRing(ringPosition, 80.0f, 190.0f, angleStart, angleEnd - 360.0f, 0, Fade(MAROON, 0.3)); // Expenses
       DrawText(TextFormat("$%d", budgetCurrent), ringPosition.x - 50, ringPosition.y - 15, 40, GRAY);
       
+      // Show expense value box
       if (GuiValueBox((Rectangle){550, 160, 200, 40}, "Expense", &expenseValue, 0, budgetMax, expenseValueActive)) {
         expenseValueActive = !expenseValueActive;
       }
       
+      // Show apply button and calculate budget on button press
       if (GuiButton((Rectangle){550, 210, 200, 40}, "Apply")) {
         expenseAdd(expenseCategory, expenseValue);
         budgetCalculate();
@@ -99,6 +105,7 @@ int main() {
       // Draw list of expenses
       Rectangle view = GuiScrollPanel(panelRec, panelContentRec, &panelScroll);
       
+      // Draw expense panel list
       BeginScissorMode(view.x, view.y, view.width, view.height);
         
         for (int i = 0; i < expensesCount; ++i) {
@@ -155,6 +162,71 @@ void save() {
   fclose(fp);
 }
 
+void loadJSON() {
+  int r;
+  char *data;
+  
+  jsmn_parser parser;
+  jsmntok_t tokens[100];
+  
+  jsmn_init(&parser);
+  
+  data = LoadFileText("expenses.json");
+  r = jsmn_parse(&parser, data, strlen(data), tokens, sizeof(tokens) / sizeof(tokens[0]));
+  
+  printf("READING STUFF!\n");
+  
+  if (r < 0) {
+    printf("SOME ERROR, FUCK!\n");
+  }
+  
+  if (r < 1 || tokens[0].type != JSMN_OBJECT) {
+    printf("ERROR: Expected object\n");
+  }
+  
+  for (int i = 0; i < r; ++i) {
+    if (jsoneq(data, &tokens[i], "expenses") == 0) 
+    {
+      jsmntok_t token = tokens[i+1];
+      expensesCount = TextToInteger(TextFormat("%.*s", token.end - token.start, data + token.start));
+    }
+    else if (jsoneq(data, &tokens[i], "max") == 0)
+    {
+      jsmntok_t token = tokens[i+1];
+      budgetMax = TextToInteger(TextFormat("%.*s", token.end - token.start, data + token.start));
+    }
+    else if (jsoneq(data, &tokens[i], "categories") == 0)
+    {
+      if (tokens[i+1].type != JSMN_ARRAY) {
+        printf("ERROR: 'categories' in JSON needs to be an array of strings!\n");
+      }
+      
+      for (int j = 0; (j < tokens[i+1].size) && (j < 4); ++j) {
+        jsmntok_t token = tokens[i+j+2];
+        //strncpy(categories[j], TextFormat("%.*s", token.end - token.start, data + token.start), 25);
+        strcpy(categories[j], TextFormat("%.*s", token.end - token.start, data + token.start));
+      }
+      
+      i += tokens[i+1].size + 1;
+    }
+  }
+
+  printf("EXPENSES: %d\n", expensesCount);
+  printf("MAX: %d\n", budgetMax);
+  
+  for (int i = 0; i < 4; ++i) {
+    printf("%d) %s\n", i, categories[i]);
+  }
+  
+  categoryDropdownUpdate();
+  printf("TEST: %s\n", categoriesDropdown);
+  //printf("CATEGORY 1: %s\n", categories[0]);
+  
+}
+
+void load() {}
+
+/*
 void load() {
   if (!FileExists("expenses.txt")) {
     reset(); 
@@ -191,6 +263,7 @@ void load() {
     reset();
   }
 }
+*/
 
 void reset() {
   expenses = realloc(expenses, sizeof(Expense));
