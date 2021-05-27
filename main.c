@@ -82,7 +82,7 @@ i32 main() {
         expenseCategoryActive = !expenseCategoryActive;
       }
       
-      // Draw categories
+      // Draw category input textboxes
       DrawText("Categories", 715, 410, 15, GRAY);
       for (u08 i = 0; i < 4; ++i) {
         if (GuiTextBox((Rectangle){505, 430 + (43 * i), 290, 38}, categories[i], 20, categoryStates[i])) {

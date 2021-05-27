@@ -91,12 +91,14 @@ nil reset() {
   budgetMax = 1000;
   budgetCurrent = 1000;
   
+  // Set categories to default
   const str categoriesDefault[] = {"Essentials", "Investing", "Entertainment", "Shopping"};
   
   for (u08 i = 0; i < 4; ++i) {
     strcpy(categories[i], categoriesDefault[i]);
   }
   
+  // Update category string
   categoryDropdownUpdate();
 }
 
