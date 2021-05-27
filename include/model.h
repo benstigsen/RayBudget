@@ -1,5 +1,8 @@
 #include "standard.h"
 
+#define MAX_TEXT_BUFFER 100
+#define MAX_CATEGORY_NAME_LENGTH 25
+
 // Structs
 typedef struct {
   u08 category;
