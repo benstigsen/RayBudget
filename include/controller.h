@@ -102,6 +102,10 @@ nil reset() {
   categoryDropdownUpdate();
 }
 
+f32 angleCalculate() {
+  return 180.0f + (((f32)budgetCurrent / (f32)budgetMax) * 360.0f);
+}
+
 // Update category string (used for category dropdown menu)
 nil categoryDropdownUpdate() {
   strcpy(categoriesDropdown, TextFormat("%s;%s;%s;%s", categories[0], categories[1], categories[2], categories[3]));

@@ -4,7 +4,7 @@
 
 /// Category
 chr (*categories)[MAX_CATEGORY_LENGTH]; // Array of category names
-chr categoriesDropdown[(MAX_CATEGORY_LENGTH * 4) + 3]; // String for raylib dropdown string "category1;category2;category3;category4"
+chr categoriesDropdown[(MAX_CATEGORY_LENGTH * 4) + 3]; // "category1;category2;category3;category4"
 
 bit categoryStates[4]; // Keeps track of 4 input boxes to see if user is typing in one of them
 
